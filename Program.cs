@@ -8,7 +8,7 @@ var app = builder.Build();
 app.MapGet("/", async context =>
 {
     context.Response.ContentType = "text/html; charset=utf-8";
-    bool injectError = Environment.GetEnvironmentVariable("INJECT_ERROR") == "1";
+    bool injectError = Environment.GetEnvironmentVariable("INJECT_ERROR") != "1";
     bool safeMode = context.Request.Query.ContainsKey("safe");
     bool buttonPressed = context.Request.Query.ContainsKey("crash");
 
