@@ -8,27 +8,23 @@ var app = builder.Build();
 app.MapGet("/", async context =>
 {
     context.Response.ContentType = "text/html; charset=utf-8";
-    bool injectError = Environment.GetEnvironmentVariable("INJECT_ERROR") != "1";
-    bool safeMode = context.Request.Query.ContainsKey("safe");
-    bool buttonPressed = context.Request.Query.ContainsKey("crash");
+    bool resetPressed = context.Request.Query.ContainsKey("reset");
+    bool buttonPressed = context.Request.Query.ContainsKey("increment");
 
     int pressCount = 0;
-    if (context.Request.Cookies.TryGetValue("crashCount", out var cookieVal))
+    if (context.Request.Cookies.TryGetValue("pressCount", out var cookieVal))
         int.TryParse(cookieVal, out pressCount);
 
-    if (safeMode)
+    if (resetPressed)
         pressCount = 0;
 
-    if (buttonPressed && !safeMode)
+    if (buttonPressed && !resetPressed)
         pressCount++;
 
-    context.Response.Cookies.Append("crashCount", pressCount.ToString(), new CookieOptions { Expires = DateTimeOffset.Now.AddHours(1) });
+    context.Response.Cookies.Append("pressCount", pressCount.ToString(), new CookieOptions { Expires = DateTimeOffset.Now.AddHours(1) });
 
-    if (injectError && !safeMode && buttonPressed && pressCount > 5)
-        throw new Exception("Simulated error after 5 button clicks!");
-
-    string buttonColor = injectError ? "#22c55e" : "#22c55e";
-    string buttonHover = injectError ? "#15803d" : "#15803d";
+    string buttonColor = "#22c55e";
+    string buttonHover = "#15803d";
 
     await context.Response.WriteAsync($@"
 <!DOCTYPE html>
@@ -61,12 +57,6 @@ app.MapGet("/", async context =>
             color: #ad6800;
             font-size: 1em;
         }}
-        .warning {{
-            margin-top: 30px;
-            color: #b91c1c;
-            font-weight: bold;
-            font-size: 1.3em;
-        }}
         button {{
             margin-top: 30px;
             background: {buttonColor};
@@ -85,7 +75,7 @@ app.MapGet("/", async context =>
         button:hover:enabled {{
             background: {buttonHover};
         }}
-        .safe-btn {{
+        .reset-btn {{
             margin-top: 16px;
             background: #2563eb;
             color: #fff;
@@ -95,7 +85,7 @@ app.MapGet("/", async context =>
             padding: 8px 22px;
             cursor: pointer;
         }}
-        .safe-btn:hover {{
+        .reset-btn:hover {{
             background: #1e40af;
         }}
     </style>
@@ -104,16 +94,13 @@ app.MapGet("/", async context =>
     <div class='container'>
         <div class='number' id='counter'>{pressCount}</div>
         <form method='GET' style='display:inline'>
-            <input type='hidden' name='crash' value='1' />
+            <input type='hidden' name='increment' value='1' />
             <button id='incrementBtn' type='submit'>Increment</button>
         </form>
         <form method='GET' style='display:inline'>
-            <input type='hidden' name='safe' value='1' />
-            <button class='safe-btn' type='submit'>Reset Counter</button>
+            <input type='hidden' name='reset' value='1' />
+            <button class='reset-btn' type='submit'>Reset Counter</button>
         </form>
-        {(injectError ? $"<div class='note'>Button clicked <b>{pressCount}</b> times (error on 6th click).</div>" : "")}
-        {(injectError ? "<div class='warning'>ERROR INJECTION ENABLED: Simulated error will occur after 5 clicks.<br/>This is for troubleshooting demos.<br/>To stop the HTTP 500s, append \"?=safe=1\" to the URL.</div>" : "")}
-        <div class='note'>Note: For the demo to work, set app setting <b>INJECT_ERROR=1</b> on the slot you want to simulate errors!</div>
     </div>
 </body>
 </html>
